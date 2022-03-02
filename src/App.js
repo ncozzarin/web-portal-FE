@@ -1,13 +1,17 @@
-
+import LoadingOverlay from 'react-loading-overlay';
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import {ethers} from "ethers";
 import abi from "./utils/WavePortal.json";
-import { getContractAddress } from "ethers/lib/utils";
+import HashLoader from 'react-spinners/HashLoader'
 
 
 const App = () => {
-  const [currentAccount, setCurrentAccount] = useState("");
+  const [currentAccount, setCurrentAccount] = useState('');
+  const [waveCount, setWaveCount] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+
+
 
   /**
   * Create a variable here that holds the contract address after you deploy!
@@ -70,22 +74,27 @@ const App = () => {
       const { ethereum } = window;
 
       if (ethereum) {
-
-
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
-        console.log(contractABI);
-        console.log(contractAddress);
-        console.log(signer);
-        console.log(ethereum);
-
-        /*
-        * You're using contractABI here
-        */
         const wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
 
         let count = await wavePortalContract.getTotalWaves();
         console.log("Retrieved total wave count...", count.toNumber());
+
+        /*
+        * Execute the actual wave from your smart contract
+        */
+        const waveTxn = await wavePortalContract.wave();
+        setIsActive(true);
+        console.log("Mining...", waveTxn.hash);
+
+        await waveTxn.wait();
+        console.log("Mined -- ", waveTxn.hash);
+
+        count = await wavePortalContract.getTotalWaves();
+        console.log("Retrieved total wave count...", count.toNumber());
+        setWaveCount(count.toNumber());
+        setIsActive(false);
       } else {
         console.log("Ethereum object doesn't exist!");
       }
@@ -94,7 +103,22 @@ const App = () => {
     }
   }
 
+  const initializeWaveCount = async () => {
+    const { ethereum } = window;
+
+    if (ethereum) {
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+      const wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
+      let count = await wavePortalContract.getTotalWaves();
+      setWaveCount(count.toNumber());
+    }
+  }
+
+
   useEffect(() => {
+    initializeWaveCount();
+
     checkIfWalletIsConnected();
   }, [])
   
@@ -107,7 +131,9 @@ const App = () => {
         </div>
 
         <div className="bio">
-        I am Nick and I worked on the IT field as a QA and a Front End developer... How are you doing today? Connect your Ethereum wallet and wave at me!
+        I am Nick and I work on the IT field as a QA and a Front End developer... 
+        Now im building Solidity projects to explore the posibilities of the blockchain technology
+        How are you doing today? Connect your Ethereum wallet and wave at me!
         </div>
 
         <button className="waveButton" onClick={wave}>
@@ -122,6 +148,28 @@ const App = () => {
             Connect Wallet
           </button>
         )}
+
+        <LoadingOverlay
+          active={isActive}
+          spinner={<HashLoader />}
+          text='Mining this block...'
+          styles={{
+            wrapper: {
+              width: '400px',
+              height: '400px',
+              overflow: isActive ? 'hidden' : 'scroll'
+            }
+          }}
+          >
+        </LoadingOverlay>
+      
+        { !isActive ? 
+        <div className="bio counter">
+          So far {waveCount} people came through and said hi!
+        </div> 
+        : 
+        null
+        }
       </div>
     </div>
   );
