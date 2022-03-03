@@ -36,3 +36,10 @@
 .counter{
   margin-top: -50%;
 }
+
+
+.waveInput{
+  margin-top: 16px;
+  padding: 8px;
+  border-radius: 5px;
+}
